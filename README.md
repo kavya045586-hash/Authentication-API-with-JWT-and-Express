@@ -1,4 +1,6 @@
 
+---
+
 # AUTHENTICATION API
 
 A Node.js backend project implementing user authentication and post creation using **Express**, **JWT**, and **MongoDB**.
@@ -7,23 +9,19 @@ A Node.js backend project implementing user authentication and post creation usi
 
 ## 📖 Description
 This project demonstrates a simple authentication flow:
-- **Register** a new user
-- **Login** with credentials to receive a JWT stored in a cookie
-- **Create posts** only if authenticated
+- **Register** a new user  
+- **Login** with credentials to receive a JWT stored in a cookie  
+- **Create posts** only if authenticated  
 
 It uses Express routers, JWT for authentication, and MongoDB with Mongoose for user storage.
 
 ---
 
 ## 🚀 Features
-- User registration (no token issued at registration)
-- User login (JWT generated and stored in cookie)
-- Protected post creation route
-- Organized project structure with controllers, models, and routes
-
----
-
-
+- User registration (no token issued at registration)  
+- User login (JWT generated and stored in cookie)  
+- Protected post creation route  
+- Organized project structure with controllers, models, and routes  
 
 ---
 
@@ -50,68 +48,20 @@ JWT_SECRET=mySuperSecretKey
 
 ---
 
-## 🔹 Step 1: Install dotenv
-```bash
-npm install dotenv
-```
-
----
-
-## 🔹 Step 2: Create `.env` File
-In the root of your project, create a file named `.env`:
-```env
-PORT=3000
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/mydb
-```
-
----
-
-## 🔹 Step 3: Load `.env` in Your Code
-At the top of `server.js` or `app.js`, add:
-```js
-require('dotenv').config();
-
-const express = require('express');
-const mongoose = require('mongoose');
-
-const app = express();
-
-// Use environment variables
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI;
-
-// Connect to MongoDB
-mongoose.connect(MONGO_URI)
-  .then(() => console.log("✅ Connected to MongoDB"))
-  .catch(err => console.error("❌ Error:", err));
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
-```
-
----
-
-## 🔹 Step 4: Ignore `.env` in Git
-Add `.env` to `.gitignore` so it’s not pushed to GitHub:
-```
-# Ignore environment variables
-.env
-```
-
----
-
-## 🔹 Step 5: Share `.env.example`
-Create a `.env.example` file to show teammates what variables they need:
-```env
-PORT=
-MONGO_URI=
-JWT_SECRET=
-```
-
----
-
+## 🔹 Steps
+1. Install dotenv  
+   ```bash
+   npm install dotenv
+   ```
+2. Create `.env` file in project root.  
+3. Load `.env` in your code:
+   ```js
+   require('dotenv').config();
+   const PORT = process.env.PORT;
+   const MONGO_URI = process.env.MONGO_URI;
+   ```
+4. Ignore `.env` in Git (`.gitignore`).  
+5. Share `.env.example` for teammates.  
 
 ---
 
@@ -158,7 +108,6 @@ app.use('/notes', noteRoutes);
 
 module.exports = app;
 ```
-👉 `app.js` mounts the routes at `/notes`.
 
 ---
 
@@ -166,19 +115,15 @@ module.exports = app;
 ```js
 const express = require('express');
 const router = express.Router();
-
-// Import controller functions
 const { createNote, getNotes, updateNote, deleteNote } = require('../controllers/note.controller.js');
 
-// Define endpoints
-router.post('/', createNote);     // POST /notes
-router.get('/', getNotes);        // GET /notes
-router.patch('/:id', updateNote); // PATCH /notes/:id
-router.delete('/:id', deleteNote);// DELETE /notes/:id
+router.post('/', createNote);
+router.get('/', getNotes);
+router.patch('/:id', updateNote);
+router.delete('/:id', deleteNote);
 
 module.exports = router;
 ```
-👉 Routes only **map URLs to controller functions**.
 
 ---
 
@@ -186,20 +131,17 @@ module.exports = router;
 ```js
 const Note = require('../models/note.model.js');
 
-// Create
 const createNote = async (req, res) => {
   const data = req.body;
   const newNote = await Note.create({ title: data.title, description: data.description });
   res.status(201).json({ message: "✅ Note created", note: newNote });
 };
 
-// Read
 const getNotes = async (req, res) => {
   const notes = await Note.find();
   res.status(200).json({ message: "✅ Notes fetched successfully", notes });
 };
 
-// Update
 const updateNote = async (req, res) => {
   const id = req.params.id;
   const updates = req.body;
@@ -207,7 +149,6 @@ const updateNote = async (req, res) => {
   res.status(200).json({ message: "Note updated successfully", note: updatedNote });
 };
 
-// Delete
 const deleteNote = async (req, res) => {
   const id = req.params.id;
   const deletedNote = await Note.findOneAndDelete({ _id: id });
@@ -216,7 +157,6 @@ const deleteNote = async (req, res) => {
 
 module.exports = { createNote, getNotes, updateNote, deleteNote };
 ```
-👉 Controllers contain the **business logic** (CRUD with MongoDB).
 
 ---
 
@@ -230,11 +170,65 @@ module.exports = { createNote, getNotes, updateNote, deleteNote };
 
 ---
 
+# 📌 Using JWT with Cookies (`req.cookies.token_client_side`)
+
+## 🔹 Setup
+1. Install cookie-parser:
+   ```bash
+   npm install cookie-parser
+   ```
+2. Add middleware in `app.js`:
+   ```js
+   const cookieParser = require('cookie-parser');
+   app.use(cookieParser());
+   ```
+
+---
+
+## 🔹 Setting JWT in a Cookie
+```js
+app.post('/login', (req, res) => {
+  const user = { id: 1, name: "Kavya" }; // dummy user
+  const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: '1h' });
+  res.cookie('token_client_side', token, { httpOnly: true });
+  res.json({ message: "✅ Login successful, token stored in cookie" });
+});
+```
+
+---
+
+## 🔹 Reading & Verifying JWT from Cookie
+```js
+app.get('/profile', (req, res) => {
+  const token = req.cookies.token_client_side;
+  if (!token) return res.status(401).json({ message: "❌ No token provided" });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    res.json({ message: "✅ Token valid", user: decoded });
+  } catch (err) {
+    res.status(401).json({ message: "❌ Invalid or expired token" });
+  }
+});
+```
+
+---
+
+## 🔹 Flow
+1. **Login** → server generates JWT and sets it in a cookie (`token_client_side`).  
+2. **Browser stores cookie** → automatically sent with future requests.  
+3. **Protected route** → server reads `req.cookies.token_client_side`.  
+4. **Verify** → if valid, access granted; if invalid, access denied.  
+
+---
+
 ## ⚡ Summary
-- **app.js** → sets up Express and mounts routes.  
+- `.env` → keep secrets safe.  
 - **Routes** → define endpoints.  
 - **Controllers** → handle logic.  
-- Together, they make your backend **modular and professional**.  
+- **JWT** → `jwt.sign()` to create, `jwt.verify()` to check.  
+- **cookie-parser** → read/write cookies easily.  
+- Together → clean, modular, secure backend.  
 
 ---
 
